@@ -52,6 +52,8 @@ func socket(ctx context.Context, net string, family, sotype, proto int, ipv6only
 		return nil, err
 	}
 
+	// fmt.Println(fd)
+
 	// This function makes a network file descriptor for the
 	// following applications:
 	//

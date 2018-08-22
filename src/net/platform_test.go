@@ -16,6 +16,7 @@ import (
 // platform configuration.
 func testableNetwork(network string) bool {
 	ss := strings.Split(network, ":")
+	// fmt.Println(ss)
 	switch ss[0] {
 	case "ip+nopriv":
 		switch runtime.GOOS {

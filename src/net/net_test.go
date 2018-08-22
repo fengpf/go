@@ -15,59 +15,66 @@ import (
 	"time"
 )
 
-func TestCloseRead(t *testing.T) {
+func TestCloseRead(t *testing.T) { //从一个已经关闭连接的读端读取数据
 	switch runtime.GOOS {
 	case "plan9":
 		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 
-	for _, network := range []string{"tcp", "unix", "unixpacket"} {
+	networks := []string{"tcp"} //[]string{"tcp", "unix", "unixpacket"}
+	for _, network := range networks {
+		//检测可测试的网络
 		if !testableNetwork(network) {
 			t.Logf("skipping %s test", network)
 			continue
 		}
 
+		//创建一个网络监听
 		ln, err := newLocalListener(network)
 		if err != nil {
 			t.Fatal(err)
 		}
 		switch network {
-		case "unix", "unixpacket":
+		case "unix", "unixpacket": //如果网络是unix或者unixpacket，则移除网络地址
 			defer os.Remove(ln.Addr().String())
 		}
-		defer ln.Close()
+		defer ln.Close() //关闭网络监听
 
+		//进行连接拨号
+		// fmt.Println(ln.Addr().Network(), ln.Addr().String()) //网络类型是 tcp 网络地址是 127.0.0.1:51993
 		c, err := Dial(ln.Addr().Network(), ln.Addr().String())
 		if err != nil {
 			t.Fatal(err)
 		}
 		switch network {
-		case "unix", "unixpacket":
+		case "unix", "unixpacket": //如果网络是unix或者unixpacket，则移除网络地址
 			defer os.Remove(c.LocalAddr().String())
 		}
-		defer c.Close()
+		defer c.Close() //关闭网路连接
 
 		switch c := c.(type) {
 		case *TCPConn:
-			err = c.CloseRead()
+			err = c.CloseRead() //关闭tcp 连接
 		case *UnixConn:
-			err = c.CloseRead()
+			err = c.CloseRead() //关闭unix 域连接
 		}
 		if err != nil {
+			//解析嵌套的网络错误并且返回，并且报告是否为来自关闭的有效错误，如果返回nil则嵌套错误是有效的
 			if perr := parseCloseError(err, true); perr != nil {
 				t.Error(perr)
 			}
 			t.Fatal(err)
 		}
 		var b [1]byte
-		n, err := c.Read(b[:])
+		n, err := c.Read(b[:]) //从连接中向b数组中读取数据
+		fmt.Println(111, n, string(b[:]))
 		if n != 0 || err == nil {
 			t.Fatalf("got (%d, %v); want (0, error)", n, err)
 		}
 	}
 }
 
-func TestCloseWrite(t *testing.T) {
+func TestCloseWrite(t *testing.T) { //从一个已经关闭连接的写端写数据
 	switch runtime.GOOS {
 	case "nacl", "plan9":
 		t.Skipf("not supported on %s", runtime.GOOS)
@@ -107,7 +114,8 @@ func TestCloseWrite(t *testing.T) {
 		}
 	}
 
-	for _, network := range []string{"tcp", "unix", "unixpacket"} {
+	networks := []string{"tcp"} //[]string{"tcp", "unix", "unixpacket"}
+	for _, network := range networks {
 		if !testableNetwork(network) {
 			t.Logf("skipping %s test", network)
 			continue
@@ -149,7 +157,10 @@ func TestCloseWrite(t *testing.T) {
 		if n != 0 || err != io.EOF {
 			t.Fatalf("got (%d, %v); want (0, io.EOF)", n, err)
 		}
+
+		fmt.Println("read", n, string(b[:]))
 		n, err = c.Write(b[:])
+		fmt.Println("write", n, string(b[:]))
 		if err == nil {
 			t.Fatalf("got (%d, %v); want (any, error)", n, err)
 		}
